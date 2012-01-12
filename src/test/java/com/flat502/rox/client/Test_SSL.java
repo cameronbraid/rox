@@ -137,11 +137,11 @@ public class Test_SSL extends TestCase {
 		Properties props = new Properties(System.getProperties());
 		
 		props.setProperty("javax.net.ssl.trustStore",
-				"src/com/flat502/rox/test/test.truststore");
+				"src/test/java/com/flat502/rox/test/test.truststore");
 		props.setProperty("javax.net.ssl.trustStorePassword", "ipmanager");
 
 		props.setProperty("javax.net.ssl.keyStore",
-				"src/com/flat502/rox/test/keystore.p12");
+				"src/test/java/com/flat502/rox/test/keystore.p12");
 		props.setProperty("javax.net.ssl.keyStorePassword", "changeit");
 		props.setProperty("javax.net.ssl.keyStoreType", "pkcs12");
 
@@ -289,11 +289,11 @@ public class Test_SSL extends TestCase {
 		Properties props = new Properties(System.getProperties());
 		
 		props.setProperty("javax.net.ssl.trustStore",
-				"src/com/flat502/rox/test/test.truststore");
+				"src/test/java/com/flat502/rox/test/test.truststore");
 		props.setProperty("javax.net.ssl.trustStorePassword", "ipmanager");
 
 		props.setProperty("javax.net.ssl.keyStore",
-				"src/com/flat502/rox/test/keystore.p12");
+				"src/test/java/com/flat502/rox/test/keystore.p12");
 		props.setProperty("javax.net.ssl.keyStorePassword", "changeit");
 		props.setProperty("javax.net.ssl.keyStoreType", "pkcs12");
 
