@@ -411,11 +411,11 @@ public class XmlRpcMarshaller implements XmlRpcConstants {
 
 		out.closeTag(Types.STRUCT);
 
-		// Check if we actually rendered any values
-		if (memberCount == 0) {
-			throw new IllegalArgumentException("Class has no non-null public fields or getters: "
-					+ param.getClass().getName());
-		}
+//		// Check if we actually rendered any values
+//		if (memberCount == 0) {
+//			throw new IllegalArgumentException("Class has no non-null public fields or getters: "
+//					+ param.getClass().getName());
+//		}
 	}
 
 	protected void marshalMap(XmlPrinter out, int depth, Map param) throws MarshallingException, IOException {
