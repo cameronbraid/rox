@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<methodCall>
+	<methodName>validator1.countTheEntities</methodName>
+	<params>
+		<param>
+			<value>'b&lt;&lt;&amp;'r&amp;z'n'is'ujqe&lt;&amp;'&amp;xcgo&lt;&gt;&amp;&lt;"dv'&lt;mltw&lt;fakp&lt;&amp;'''hy"</value>
+			</param>
+		</params>
+	</methodCall>

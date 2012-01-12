@@ -1,0 +1,237 @@
+<?xml version="1.0" standalone="yes"?>
+
+<project name="RoX" basedir="." default="package">
+	<property name="version.major" value="1" />
+	<property name="version.minor" value="2" />
+	<property name="version" value="${version.major}.${version.minor}" />
+	<property name="version.src" value="src/com/flat502/rox/Version.java" />
+	<property name="changelog.html" value="changelog.html" />
+	<property name="download.html" value="download.html" />
+	<property name="readme.txt" value="README.txt" />
+	<property name="author.name" value="James Greenfield" />
+	<property name="author.email" value="rox@flat502.com" />
+
+	<property name="build" value="build" />
+	<property name="classes" value="${build}/classes" />
+	<property name="tests" value="${build}/tests" />
+	<property name="testreports" value="${build}/testreports" />
+	<property name="jar" value="${build}/jar" />
+	<property name="doc" value="doc" />
+	<property name="examples.dir" value="${build}/${doc}/examples" />
+	<property name="htmltestreports.dir" value="${build}/${doc}/testreports" />
+	<property name="javadoc" value="javadoc" />
+	<property name="jar.file" value="rox.jar" />
+	<property name="log4j.jar.file" value="rox-log4j.jar" />
+	<property name="dist" value="${build}/dist" />
+	<property name="src.zip.file" value="${dist}/rox-${version}.src.zip" />
+	<property name="bin.zip.file" value="${dist}/rox-${version}.bin.zip" />
+	<property name="site.zip.file" value="${dist}/rox-${version}.site.zip" />
+	<property name="lib" value="lib" />
+
+	<path id="compile.classpath">
+		<fileset dir="${lib}">
+			<include name="nanoxml-2.2.3.jar" />
+			<!-- For the Log4J runtime extension -->
+			<include name="log4j-1.2.13.jar" />
+			<!-- These two are only so we can use the Apache impl for compat testing -->
+			<include name="apache-xmlrpc-2.0.1/xmlrpc-2.0.1.jar" />
+			<include name="commons-codec-1.3/commons-codec-1.3.jar" />
+		</fileset>
+	</path>
+
+	<path id="test.classpath">
+		<pathelement path="${classes}" />
+		<pathelement path="${tests}" />
+		<fileset dir="${lib}">
+			<include name="xmlunit1.0.jar" />
+		    <include name="junit.jar" />
+		</fileset>
+	</path>
+
+	<!-- Custom task definitions -->
+	<taskdef name="java2html" classname="de.java2html.anttasks.Java2HtmlTask" classpath="lib/java2html.jar" />
+	
+	<!-- See https://junit-anttask.dev.java.net/ -->
+	<taskdef name="junit2" classname="com.sun.ant.junit.JUnitTask">
+	  <classpath>
+	    <pathelement path="${lib}/junit-anttask.jar" />
+	    <pathelement path="${lib}/junit.jar" />
+	  </classpath>
+	</taskdef>
+
+	<!-- Targets -->
+	<target name="init">
+		<tstamp />
+		<mkdir dir="${build}" />
+		<mkdir dir="${classes}" />
+		<mkdir dir="${tests}" />
+		<mkdir dir="${testreports}" />
+		<mkdir dir="${htmltestreports.dir}" />
+		<mkdir dir="${jar}" />
+		<mkdir dir="${dist}" />
+
+		<condition property="java.version.15">
+			<or>
+				<equals arg1="${java.specification.version}" arg2="1.5" />
+				<equals arg1="${java.specification.version}" arg2="1.6" />
+			</or>
+		</condition>
+	</target>
+
+	<target name="genversion" depends="init" description="Generate Version.java">
+		<replaceregexp file="${version.src}" match="(\d+)/\*MAJOR\*/" replace="${version.major}/*MAJOR*/" />
+		<replaceregexp file="${version.src}" match="(\d+)/\*MINOR\*/" replace="${version.minor}/*MINOR*/" />
+		<replaceregexp file="${version.src}" match='"\S*"/\*AUTHOR\*/' replace='"${author.name}"/*AUTHOR*/' />
+		<replaceregexp file="${readme.txt}" match='RoX version \d+\.\d+' replace='RoX version ${version.major}.${version.minor}' />
+	</target>
+
+	<target name="compile" depends="genversion" description="Compile all Java source files">
+		<javac destdir="${classes}" debug="on" source="1.5" target="1.5">
+			<src path="src" />
+			<classpath refid="compile.classpath" />
+		</javac>
+
+		<!-- copy over non-Java resources -->
+		<copy todir="${classes}">
+			<fileset dir="src">
+				<exclude name="**/*.java" />
+				<exclude name="**/*.html" />
+			</fileset>
+		</copy>
+
+		<!-- copy in license -->
+		<copy file="LICENSE.txt" todir="${classes}" />
+	</target>
+
+	<target name="compiletests" depends="compile" description="Compile all Java test cases">
+		<javac destdir="${tests}" debug="on" source="1.5" target="1.5">
+			<src path="tests" />
+			<classpath refid="test.classpath" />
+			<classpath refid="compile.classpath" />
+			<classpath path="${classes}" />
+		</javac>
+
+		<!-- copy over non-Java resources -->
+		<copy todir="${tests}">
+			<fileset dir="tests">
+				<exclude name="**/*.java" />
+				<exclude name="**/*.html" />
+			</fileset>
+		</copy>
+	</target>
+
+	<target name="jar" depends="compile" description="Build the RoX binary JAR">
+		<!-- Primary JAR file -->
+		<jar destfile="${jar}/${jar.file}" basedir="${classes}">
+			<exclude name="com/flat502/rox/log/log4j/**" />
+			<exclude name="com/flat502/rox/marshal/xmlrpc/XmlRpcMarshallerJ5.java" />
+		</jar>
+
+		<!-- Log4J extensions JAR file -->
+		<jar destfile="${jar}/${log4j.jar.file}" basedir="${classes}">
+			<include name="com/flat502/rox/log/log4j/**" />
+		</jar>
+	</target>
+
+	<target name="javadoc" depends="init" description="Generate JavaDocs">
+		<javadoc destdir="${build}/${doc}/${javadoc}" author="false" version="true" use="true" windowtitle="RoX ${version}" source="1.5" overview="src/overview.html">
+			<classpath refid="compile.classpath" />
+			<packageset dir="src" defaultexcludes="yes">
+				<include name="com/flat502/**" />
+				<exclude name="com/flat502/rox/test/**" />
+			</packageset>
+		</javadoc>
+	</target>
+
+	<target name="java2html" depends="init" description="Convert demos into HTML">
+		<java2html srcdir="src" destdir="${examples.dir}" style="eclipse" showLineNumbers="true" showFileName="true" showTableBorder="true">
+			<include name="com/flat502/rox/demo/*.java" />
+			<include name="com/flat502/rox/demo/validation/*.java" />
+		</java2html>
+	</target>
+
+	<target name="junit" depends="compiletests" description="Run all JUnit testcases">
+		<junit2 printsummary="yes" showoutput="yes">
+			<classpath refid="compile.classpath" />
+			<classpath refid="test.classpath" />
+			<formatter type="xml" />
+			<batchtest todir="${testreports}">
+				<fileset dir="tests">
+					<include name="**/Test_*.java" />
+				</fileset>
+			</batchtest>
+		</junit2>
+	</target>
+
+	<target name="junitreport" depends="junit" description="Generate JUnit reports">
+		<junitreport todir="${testreports}">
+			<fileset dir="${testreports}">
+				<include name="TEST-*.xml" />
+			</fileset>
+			<report format="frames" todir="${htmltestreports.dir}" />
+		</junitreport>
+	</target>
+
+	<target name="sitecontent" description="Generate the site content">
+		<copy todir="${build}/${doc}">
+			<fileset dir="site">
+				<exclude name=".svn" />
+			</fileset>
+		</copy>
+		<loadfile property="changelog.text" srcfile="CHANGES.txt" />
+		<replace file="${build}/${doc}/${changelog.html}" token="__CHANGELOG__" value="${changelog.text}" />
+		<replace file="${build}/${doc}/${download.html}" token="__VERSION__" value="${version}" />
+	</target>
+
+	<target name="doc" depends="javadoc, java2html, junitreport, sitecontent" description="Merge the site content with all generated HTML">
+		<!-- This target just pulls together all doc targets -->
+	</target>
+
+	<target name="packagesource" depends="init" description="Package the source distributable">
+		<zip destfile="${src.zip.file}" duplicate="fail">
+			<fileset dir=".">
+				<include name="build.xml" />
+				<include name="CHANGES.txt" />
+				<include name="LICENSE.txt" />
+				<include name="README.txt" />
+				<include name="lib/java2html.jar" />
+				<include name="lib/nanoxml-*.jar" />
+				<include name="lib/xmlunit*.jar" />
+				<include name="lib/sax2.jar" />
+				<include name="lib/dom.jar" />
+				<include name="src/**" />
+				<exclude name="src/com/flat502/rox/test/**" />
+				<include name="tests/**" />
+			</fileset>
+		</zip>
+	</target>
+
+	<target name="packagebinary" depends="jar, doc, junit" description="Package the binary distributable">
+		<zip destfile="${bin.zip.file}" duplicate="fail">
+			<fileset dir="." includes="CHANGES.txt" />
+			<fileset dir="." includes="LICENSE.txt" />
+			<fileset dir="." includes="README.txt" />
+			<fileset dir="lib" includes="nanoxml-*.jar" />
+			<fileset dir="lib" includes="xmlunit*.jar" />
+			<fileset dir="lib" includes="sax2.jar" />
+			<fileset dir="lib" includes="dom.jar" />
+			<fileset dir="${jar}" includes="${jar.file}" />
+			<fileset dir="${jar}" includes="${log4j.jar.file}" />
+			<fileset dir="${build}" includes="${doc}/**" />
+			<fileset dir="." includes="src/com/flat502/rox/demo/**" />
+		</zip>
+	</target>
+
+	<target name="packagesite" depends="clean, doc" description="Package the website distributable">
+		<zip destfile="${site.zip.file}" duplicate="fail">
+			<fileset dir="${build}/${doc}" includes="**" />
+		</zip>
+	</target>
+
+	<target name="package" depends="clean, packagesite, packagesource, packagebinary" description="Package all distributables" />
+
+	<target name="clean" description="Deletes all the generated artifacts">
+		<delete dir="${build}" />
+	</target>
+</project>
+

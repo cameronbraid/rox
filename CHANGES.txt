@@ -1,0 +1,388 @@
+Release 1.2
+=====================
+
+  - Fixed a bug in the SaxUnmarshaller that prevented internal state from
+    correctly being reset when unmarshalling failed while handling a nested
+    struct or array.
+  - Improved error detection when a complex type is being unmarshalled and
+    the target type is incompatible (e.g. unmarshalling a struct into a String
+    member).
+  - Introduced support for pipelining HTTP 1.1 requests (including POST
+    requests, which violates the HTTP RFC but pipelining support for GET
+    requests only is a little useless for XML-RPC).
+  - Improved structural validation for XML-RPC messages.
+
+Release 1.1
+=====================
+
+  - Stashing the SAXParserFactory instance for a (slight) performance increase.
+  - Fixed a bug in the check for a reset() method on the SAXParser in use.
+  - Pooled connections are now closed when a zero byte read occurs.
+  - Giving up on supporting 1.4 only since it's starting to feel a bit antiquated
+    and no longer worth the trouble.
+  - Introduced rewritten SaxUnmarshaller. This implementation should function correctly with
+    any off the shelf SAX parser. It's marginally slower than the previous implementation
+    (but that's the price of correctness).
+  - SSL support has been rewritten to use Java 1.5's SSLEngine instead of the
+    black magic used prior to this release to combine NIO and SSL support on
+    Java 1.4. SSL configuration is considerably more flexible.
+  - As part of the SSL rewrite SSLSessionPolicy has been introduced, providing
+    the ability to configure flexible session acceptance policy rules.
+  - Much in the way of refactoring, some of which will break compatibility (but generally
+    only for sub-classes, users of this library should be largely unaffected).
+    
+Release 1.0
+=====================
+
+  - Support for Java 1.5 improved. Rox will now load different marshalling implementations
+    based on the Java runtime version. Under version 1.5 and higher support for generics
+    and enumerated types is transparent.
+  - Rox now supports optional automatic mapping of HTTP GET requests onto your XML-RPC
+    method handlers. See the com.flat502.rox.server.CgiRequestUnmarshaller class
+    for more details.
+  - Connections from HTTP/1.0 clients are correctly terminated after a response has been
+    returned (unless they're using HTTP/1.1-style keepalives).
+  - Responses will now mirror the HTTP version of the request and HTTP 1.1 headers
+    will not be included in these responses.
+  - HttpRpcServer now supports an idle client timer. This is disabled by default. If
+    set clients that are idle for a period exceeding the timeout specified are
+    forcibly disconnected.
+
+Release 0.9
+=====================
+
+  - The connection pool was only being scanned for aged connections when connections
+    were returned. The pool is now also scanned when pooled connections are checked out.
+    This ensures that aged connections are never used.
+  - IOExceptions during a write operation resulted in a busy loop sending CPU usage to
+    100%. This exception is now handled and the offending channel is cancelled.
+  - A logic error that caused connection pooling to stop expiring aged connections has
+    been fixed.
+
+Release 0.8
+=====================
+
+  - A new method has been added to the UnmarshallerAid base class that controls
+    whether or not missing fields should be ignored when unmarshalling an XML-RPC
+    struct into a Java type. Both the DOM and SAX unmarshaller honour this flag.
+  - The UnmarshallerAid interface has been replaced with an abstract base class. Although
+    slightly less convenient than an interface, this allows Rox to provide default 
+    implementations for some methods and supports evolving the class without breaking
+    compatibility. As part of this change the functionality has been split into
+    three classes, one base class and two that are specialized for call
+    and response unmarshalling.
+  - A number of other calls to methods only available on 1.5 have been replaced
+    with equivalent calls that exist on 1.4.
+  - The SAX marshaller pools parser instances to improve performance. This logic
+    depends on the SAXParser.reset() method which was introduced in 1.5. We now
+    check for the availability of this method and only call it if it exists (this
+    check is done once). For efficiency's sake, if the method is not available
+    but we're using our own parser imeplementation then we typecast and call the
+    method directly. Thanks to Sandeep Raja Rao for reporting this problem.
+  - The ChannelSelector was erroneously trying to read off unowned channels
+    that were not yet connected. This resulted in a NotYetConnectedException that
+    ultimately resulted in that channel being forcibly closed.
+  - RemoteSocketClosedException is now logged at the TRACE level, since it
+    happens frequently and isn't really an error condition.
+  - The shared connection pool's logic for checking out a connection has
+    been rewritten as part of work to address a problem that allowed
+    more connections than the defined limit to be checked out and to
+    address a NullPointerException that resulted because clients seen
+    for the first time that could be satisfied with an existing pooled
+    connection were not recorded.
+  - The ThreadQueue class has been greatly simplified as part of work 
+    to address a rare race condition. The guarantees it makes are slightly
+    weaker but still sufficient for the original (performance related)
+    reasons it was written.
+  - Corrected a NullPointerException that resulted from erroneously removing a
+    pooled connection stack when a connection was closed remotely.
+  - An unhandled exception within a TimerTask implementation cancelled the global
+    request timer causing havoc and general dismay.
+  - Corrected a NullPointerException that resulted from erroneously removing an
+    active set when a connection was cleaned up when a timeout occurred just after
+    a client had detached from the connection pool.
+
+Release 0.7
+=====================
+
+  - NoSuchMethodException and NoSuchMethodError are reported by server 
+    instances using a 404 (Not Found) HTTP response code.
+  - Shutting a server down did not correctly close established connections.
+  - Remote closure of a connection that was pooled on the client side
+    resulted in a deadlock because the wrong client was notified of the closure.
+  - Timeout exceptions were closing the connection the timeout occurred on
+    without notifying the connection pool, resulting in a logical resource
+    leak.
+  - Timeout exceptions are now raised within the context of the caller
+    rather than the timer thread.
+  - A common base class has been introduced for both timeout exceptions so
+    uniform handling can easily be applied to both cases.
+  - A default request timeout can now be configured on a ClientResourcePool.
+    Any client instances sharing this pool will have their request timeout
+    initialized based on this value.
+  - When using a resource pool connection pooling is keyed on the protocol,
+    host and port rather than on individual client instances. This allows
+    client instances that shared a remote destination to share connections.
+  - All instances of SimpleDateFormat are now retrieved from thread local
+    storage. This ensures that these instances are never accessed by
+    multiple threads simultaneously while avoiding creating unnecessary 
+    instances.
+  - The synchronous client API will now raise a more specific IOException
+    (RPCCallFailedException) if a non-timeout related error occurs invoking
+    an XML-RPC method.
+  - The resource pool mentioned previously is now responsible for connection
+    pooling. This makes it possible restrict the number of open connections
+    across a set of client instances.
+  - It's now possible to associated an explicit pool of worker threads with
+    a collection of client or server instances. This makes it possible to
+    reuse I/O, worker and timer threads across a selected set of instances, 
+    which assists when trying to scale to large numbers of client or server
+    instances by keeping the thread count under control.
+  - Introduced a LogFactory class. The model for logging has changed in this 
+    release. Log instances are no longer associated with a particular client
+    or server instance. Rather, they're "looked up" in much the same fashion
+    as with Log4J. This is a slightly less flexible approach to logging since
+    it effectively forces a single global logging strategy, but I don't feel 
+    this limitation is too serious (for now), and this simplifies logging and
+    removes one coupling point between worker threads and client/server 
+    instances in anticipation of some upcoming changes.
+
+Release 0.6
+=====================
+
+  - Various fixes to the SAX based unmarshaller when dealing with nested
+    structs that must be mapped onto user-defined classes.
+  - Corrected a logic error in the SAX unmarshaller that broke XML-RPC
+    fault handling.
+  - Some improvements to the SAX unmarshaller when handling messages
+    that span buffers.
+  - Corrected an error when handling an empty value within the SAX
+    unmarshaller.
+  - Fixed a buffer refill error in our internal XML parser.
+  - Added logic to avoid reporting a ClosedSelectorException unnecessarily.
+  - NullLog no longer logs errors to standard error by default. I'm still
+    thinking about how best to handle this.
+
+Release 0.5
+=====================
+
+  - The timeout for an SSL handshake is now configurable, and defaults to
+    10 seconds.
+  - The underlying socket channel (connection) pool now supports a
+    an optional limit. If set threads will be blocked when this limit
+    is reached and held until capacity is once again available. A
+    timeout may be configured for this blocking period. If exceeded
+    an exception will be raised (releasing the blocked thread). The
+    limit and timeout default to 0 (no limit, infinite timeout).
+  - Support has been introduced for customizing the encoding used
+    on the wire. An implementation supporting gzipping the RPC method
+    content has been included. This API is still unstable and is
+    subject to change (or possibly removal). Customizing the encoding
+    is currently pretty expensive in space and only really makes
+    sense if you're behind a really thin pipe or your requests are
+    large. Oh, and this is a proprietary extension to XML-RPC but it
+    should be compatible with other such "proprietary" extensions if
+    they followed the intention of the HTTP specification with respect
+    to content encodings.
+  - As part of the work to support custom encodings the HTTP
+    codebase now supports the Accept-Content header in all it's
+    glory.
+  - Fixed a DomUnmarshaller bug that meant directly compatible types
+    were not correctly handled as part of the generic type coercion
+    logic. A concrete side-effect was that Class members that were
+    typed as a java.util.Map or java.util.List would not be correctly
+    assigned during unmarshalling.
+  - Fixed a bug which meant connections were being flushed from the
+    connection pool irrespective of how recently they were used.
+  - Removed a spurious ByteBuffer.put(). A send data buffer was being 
+    copied once more than was necessary for every write.
+  - Fixed a bug in the XmlRpcSaxParser that corrupted ampersand entities.
+  - Fixed a bug in the Base64 implementation. Decoding array subsets
+    was broken.
+  - The DomUnmarshaller now correctly handles members with a concrete 
+    List or Map type.
+  - The SaxUnmarshaller now correctly handles members with a concrete 
+    List or Map type and type coercion has been brought into line with
+    the DomUnmarshaller.
+  - Numerous performance enhancements, including
+     * a rewrite of the HTTP header parsing logic 
+     * a rewrite of the HTTP header marshalling logic
+     * corrected logic that would reparse HTTP headers unnecessarily
+       if an HTTP message was fragemented over multiple packets
+     * tweaks in the NIO code to directly manipulate the Selector where
+       permissable.
+     * Removal of an unnecessary additional ByteBuffer write per
+       send.
+     * XML marshalling now avoids PrintStream and handles character
+       encoding directly.
+     * General cleanup of the SaxUnmarshaller and XmlRpcSaxParser so we can
+       make these the default unmarshalling implementations for Rox
+       (they're quite a bit faster than the DOM based solution).
+    In all these changes have resulted in an order of magnitude increase
+    in throughput with a single client performing synchronous calls in
+    a tight loop (other tests pending).
+  - A bunch of internal methods that are shared by both unmarshaller
+    implementations have been exposed as utility routines.
+  - If an RpcFault was received by an asynchronous client-side handler
+    both handleException() handleResponse() were invoked. This has been
+    corrected and only the former is invoked.
+  - Some minor error handling improvements, including avoiding calling
+    ResponseHandler.handleException() again if it raises an exception and
+    trapping Throwable instead of Exception.
+  - NullLog will now log errors to standard error by default.
+
+Release 0.4
+=====================
+
+  - registerProxyingHandler() has been pushed down into XmlRpcServer, since
+    it registers an XML-RPC specific handler. This should not affect 
+    existing code unless the server instance was being stored in a member
+    of type HttpRpcServer.
+  - HttpRpcServer and XmlRpcServer now use InetAddress instances instead
+    of Strings for host addresses. I think this is more consistent with
+    other, similar APIs, especially within the JDK.
+  - HttpRpcProcessor now implements Runnable instead of extending Thread.
+  - HttpRpcProcessor now sports a stop() method for shutting down a client
+    or server.
+  - String URIs (or mount points) are now used instead of URI instances.
+    URI's normalization was sufficiently lacking so that it doesn't make
+    sense to depend so heavily on this class. URI normalization has also
+    been moved into Utils.normalizeURIPath() so we can cater explicitly
+    for some edge cases.
+  - Fixed a bug which resulted in a malformed Content-Type header being
+    returned to the client if an exception occurred within a server-side
+    handler.
+  - When proxying objects on the server side Rox will now raise an 
+    exception if more than one method with a given name is declared on 
+    the target object (currently there is no support for method 
+    overloading and there are no immediate plans to support this). 
+    Methods declared on java.lang.Object are not included when
+    proxying an Object.
+  - Rox was erroneously expecting the HTTP Host header to be present
+    in HTTP responses. They're only mandatory in requests. This has been 
+    fixed.
+  - An XmlRpcFaultException has been introduced and RpcFaultException
+    moved and modified to extend RuntimeException. This exception can
+    be raised if explicit control over the XML RPC fault returned to
+    the client is required from within a method on a proxied server
+    side Object and you don't want to (or can't) modify the throws 
+    clause on that method.
+  - Final fields are now skipped during marshalling and unmarshalling.
+  - Client-side timeouts are now supported. Timeouts are set per
+    client instance, but can be changed on an existing instance. By
+    default there is no timeout. If a request times out the connection
+    on which the request is pending is closed.
+
+Release 0.3
+=====================
+
+  - Fixed a bug which produced malformed XML for XML-RPC faults.
+  - Byte, Short and their respective primitive types are now
+    marshalled as ints.
+  - Character (and char) are marshalled as a single character
+    string.
+  - The ParameterTypeMapper interface has been replaced by a more
+    general UnmarshallerAid which supports pluggable FieldNameCodec
+    implementations as well as parameter type mapping.
+  - The logic governing Class member introspection has been extracted 
+    into a new class (ClassDescriptor). In addition to centralizing
+    this logic this new class caches class member information upfront
+    which should result in a performance improvement when repeatedly
+    marshalling or unmarshalling objects of the same type.
+  - A new utility method has been added to HttpRpcServer to
+    simplify using a synchronous proxying request handler.
+  - Method lookup on the server side when proxying an object is
+    more general (and hopefully more useful as a result). Names
+    are matched case-insensitively after dropping '-' and '_'.
+  - Static fields were being included when marshalling or
+    unmarshalling objects. They're now skipped (along with transient
+    fields).
+  - Encoded field names are cached as they're computed to reduce
+    the cost of repeatedly marshalling instances of the same class.
+  - In the spirit of being "strict in what you produce and tolerant
+    in what you accept" RoX will now raise an exception if an
+    integer value exceeds the range defined by the XML-RPC
+    specification (32 bits, signed). RoX will accept integer values
+    that exceed this range, provided they fit into the target
+    member's range.
+  - Convenience methods have been added for configuring and
+    querying the number of worker threads on an HttpRpcProcessor
+    instance.
+
+Release 0.2
+=====================
+
+  - The AcceptPolicy interface has changed slightly. In addition
+    to the new SocketChannel an (approximate) indication of the number
+    of existing connections is passed to the policy implementation.
+  - Fixed a race condition during connection establishment which
+    resulted in requests occasionally failing to be sent to the
+    server.
+  - Fixed a bug that meant if the remote entity shuts a connection 
+    down cleanly during a read the caller wasn't notified. 
+    A specific IOException exception (RemoteSocketClosedException) 
+    is passed to the caller to indicate this case.
+  - All the boolean test methods on the Log interface now take a Class
+    context parameter so implementations can make the most informed
+    decision about whether or not a given logging action should be
+    allowed.
+  - Log4J has been added to the RoX project, along with a Log4J
+    adapter implementation of the Log interface. This adapter class
+    is built into a separate (optional) extension JAR (rox-log4j.jar).
+  - Introspected Fields are cached. Class.getField() is pretty
+    expensive in the general case.
+  - Support has been added for selecting between compact XML for
+    efficiency, or more readable but less efficient XML for
+    debugging.
+  - The ResponseChannel interface now has a close() method on it
+    allowing asynchronous server-side method call handlers 
+    to close the channel on which a response would normally be
+    sent.
+  - When unmarshalling a struct member where the Java Object member 
+    is an array type with a component type other than Object RoX
+    will marshal an array of instances of the component type. So
+    if you have a field (public or accessible via a setter) of
+    type Foo[] then it will be populated with instances of Foo
+    (assuming the data within the XML-RPC array is amenable).
+  - Fixed a bug that would result in a NullPointerException instead
+    of a more informative exception if no field or setter could be 
+    located for a struct member.
+  - Support has been added for marshalling and unmarshalling arrays
+    of primitive types (int, long, double, float and boolean).
+  - Support has been added for marshalling and unmarshalling 
+    multi-dimensional (well, they're really jagged) arrays, of both 
+    primitive types and POJOs.
+  - XmlRpcMethod and kin have been refactored to split out unmarshalling.
+    Marshalling is still the province of this class but unmarshalling is
+    now handled by implementations of a new pair of interfaces, one
+    for method calls and one for method responses. The (DOM based) 
+    unmarshalling logic in XmlRpcMethod has been moved out into 
+    concrete implementations of these interfaces. This required a number
+    of incompatible interface changes.
+  - An interface encapsulating common XML-RPC constants has
+    been introduced.
+  - An experimental SAX based unmarshaller is included with this
+    release. It's by no means finished yet and the interface exposed
+    is still under review. Thanks to Roland Patterson-Jones for
+    this contribution (and some testing and debugging).
+  - Fixed a bug that broke server side proxying when parameter types
+    were user-defined structs.
+  - Field name encoding/decoding is now pluggable. RoX still defaults
+    to assuming hyphenated fields for XML-RPC struct member names
+    and camelCase for Java member names.
+  - As of this release RoX passes the validation suite published at
+    
+       http://validator.xmlrpc.com/
+       
+    The source code for the server can be found in the class
+    com.flat502.rox.demo.validation.ValidationSuiteServer. There's
+    also a client implementation for testing locally.
+  - Presence of the Host header was being enforced irrespective of
+    the HTTP version in the message. This is now only enforced for
+    HTTP 1.1 messages.
+
+Release 0.1
+=====================
+
+  - First public release
+  - This is really an alpha release
