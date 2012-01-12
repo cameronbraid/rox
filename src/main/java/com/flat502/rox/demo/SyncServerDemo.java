@@ -1,6 +1,7 @@
 package com.flat502.rox.demo;
 
 import java.net.InetAddress;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
@@ -25,7 +26,14 @@ public class SyncServerDemo implements SynchronousRequestHandler {
 		}
 
 		if (call.getName().equals("example.getDate")) {
-			return new XmlRpcMethodResponse(new TimeInfo());
+			TimeInfo timeInfo = new TimeInfo();
+			timeInfo.info = "Hello World";
+			timeInfo.today = new Date();
+			
+			TimeInfo a1 = new TimeInfo();
+			a1.info = "Hi There";
+			timeInfo.array = new TimeInfo[]{a1};
+			return new XmlRpcMethodResponse(timeInfo);
 		} else if (call.getName().equals("example.sum")) {
 			Integer sum = new Integer(sum((List)call.getParameters()[0]));
 			return new XmlRpcMethodResponse(sum);

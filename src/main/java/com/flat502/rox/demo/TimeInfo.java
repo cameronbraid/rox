@@ -9,9 +9,9 @@ import java.util.Date;
  * directly.
  */
 public class TimeInfo {
-	public Date today = new Date();
-	public String info = "Brought to you by " + this.getClass().getName();
-
+	public Date today;
+	public String info;
+	public TimeInfo[] array;
 	public String toString() {
 		return "TimeInfo[today=" + today + ", info=" + info + "]";
 	}

@@ -31,6 +31,8 @@ public class SyncClientDemo {
 			System.out.println("getDate() returned with");
 			System.out.println("   today is "+rsp.today);
 			System.out.println("   info: "+rsp.info);
+			System.out.println("   array: "+rsp.array);
+			System.out.println("   array[0].info: "+rsp.array[0].info);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
